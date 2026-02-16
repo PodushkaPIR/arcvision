@@ -12,8 +12,8 @@ import (
 type Config struct {
 	Env        string `yaml:"env" env-default:"local"`
 	HttpServer        `yaml:"http_server"`
+	Storage           `yaml:"storage"`
 	AI                `yaml:"ai"`
-	Deck              `yaml:"deck"`
 }
 
 type HttpServer struct {
@@ -22,16 +22,27 @@ type HttpServer struct {
     IdleTimeout  time.Duration `yaml:"iddle_timeout" env-default:"60s"`
 }
 
-type AI struct {
-	AIProvider string
-	AIAPIKey   string
-	AIBaseURL  string
-	AIModel    string
-}
-
-type Deck struct {
+type Storage struct {
 	DeckPath   string `yaml:"deck_path" env:"DECK_PATH" env-default:"./web/data/deck.json"`
 	SpreadPath string `yaml:"spread_path" env:"SPREAD_PATH" env-default:"./web/data/spreads.json"`
+}
+
+type AIConfig struct {
+	Mode     string `yaml:"mode" env:"AI_MODE" env-default:"local"`
+
+	Cloud struct {
+		URL      string `yaml:"url" env:"AI_CLOUD_URL"`
+		Key      string `env:"AI_CLOUD_KEY"`
+		FolderID string `env:"AI_CLOUD_FOLDER_ID"`
+		Model    string `yalm:"model" env-default:"yandexgpt-lite"`
+	} `yaml:"cloud"`
+
+	Local struct {
+		URL   string `yaml:"url" env:"AI_LOCAL_URL" env-default:"https://localhost:11434/api/generate`
+		Model string `yaml:"model" env-default:"llama3"`
+
+	} `yaml:"local"`
+
 }
 
 func MustLoad() *Config {
