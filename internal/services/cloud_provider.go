@@ -28,7 +28,9 @@ func NewCloudPredictor(log *slog.Logger, url, key, model string) *CloudPredictor
 }
 
 func (p *CloudPredictor) Generate(ctx context.Context, prompt string) (string, error) {
-	p.log.Debug("Calling Cloud AI (OpenRouter)", slog.String("model", p.model))
+	p.log.Debug("Calling Cloud AI (OpenRouter)",
+		slog.String("model", p.model),
+		slog.Int("prompt_len", len(prompt)))
 
 	payload := map[string]any{
 		"model": p.model,
@@ -51,20 +53,28 @@ func (p *CloudPredictor) Generate(ctx context.Context, prompt string) (string, e
 	req.Header.Set("HTTP-Referer", "https://arcvision.local")
 	req.Header.Set("X-Title", "ArcVision")
 
-	client := &http.Client{Timeout: 60 * time.Second}
+	client := &http.Client{Timeout: 120 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	body, _ := io.ReadAll(resp.Body)
+	p.log.Debug("OpenRouter response",
+		slog.Int("status", resp.StatusCode),
+		slog.Int("body_len", len(body)))
 
 	if resp.StatusCode != http.StatusOK {
 		p.log.Error("OpenRouter API error",
 			slog.Int("status", resp.StatusCode),
 			slog.String("response", string(body)))
 		return "", fmt.Errorf("cloud AI status: %d, response: %s", resp.StatusCode, string(body))
+	}
+
+	if len(body) == 0 {
+		p.log.Error("OpenRouter returned empty body")
+		return "", fmt.Errorf("empty response from cloud AI")
 	}
 
 	var result struct {
@@ -76,12 +86,17 @@ func (p *CloudPredictor) Generate(ctx context.Context, prompt string) (string, e
 	}
 
 	if err := json.Unmarshal(body, &result); err != nil {
-		return "", err
+		p.log.Error("Failed to parse OpenRouter response",
+			slog.String("error", err.Error()),
+			slog.String("body", string(body)))
+		return "", fmt.Errorf("failed to parse response: %w", err)
 	}
 
-	if len(result.Choices) > 0 {
-		return result.Choices[0].Message.Content, nil
+	if len(result.Choices) == 0 {
+		p.log.Error("OpenRouter returned no choices", slog.String("body", string(body)))
+		return "", fmt.Errorf("empty choices from cloud AI")
 	}
 
-	return "", fmt.Errorf("empty response from cloud AI")
+	p.log.Debug("AI response received", slog.Int("response_len", len(result.Choices[0].Message.Content)))
+	return result.Choices[0].Message.Content, nil
 }
