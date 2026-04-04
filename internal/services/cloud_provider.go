@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 )
 
 type CloudPredictor struct {
@@ -18,32 +19,71 @@ type CloudPredictor struct {
 }
 
 func NewCloudPredictor(log *slog.Logger, url, key, folderID, model string) *CloudPredictor {
-	return &CloudPredictor{log: log, url: url, key: key, folderID: folderID, model: model}
+	return &CloudPredictor{
+		log:      log,
+		url:      url, // https://llm.api.cloud.yandex.net/foundationModels/v1/completion
+		key:      key,
+		folderID: folderID,
+		model:    model, // yandexgpt-lite или yandexgpt
+	}
 }
 
-func (pred *CloudPredictor) Generate(ctx context.Context, prompt string) (string, error) {
-	payload := map[string]interface{} {
-		"modelUri": fmt.Sprintf("gpt://%s/%s", pred.folderID, pred.model),
-		"messages": []map[string]string {
+func (p *CloudPredictor) Generate(ctx context.Context, prompt string) (string, error) {
+	p.log.Debug("Calling Cloud AI (Yandex)", slog.String("model", p.model))
+
+	// Формат YandexGPT
+	payload := map[string]any{
+		"modelUri": fmt.Sprintf("gpt://%s/%s", p.folderID, p.model),
+		"completionOptions": map[string]any{
+			"stream": false,
+			"temperature": 0.6,
+			"maxTokens": "2000",
+		},
+		"messages": []map[string]string{
+			{"role": "system", "text": "Ты мистический таролог."},
 			{"role": "user", "text": prompt},
 		},
 	}
 
 	data, _ := json.Marshal(payload)
-	req, _ := http.NewRequestWithContext(ctx, "POST", pred.url, bytes.NewBuffer(data))
-	req.Header.Set("Authorization", "Api-Key "+pred.key)
+	req, err := http.NewRequestWithContext(ctx, "POST", p.url, bytes.NewBuffer(data))
+	if err != nil {
+		return "", err
+	}
+	
+	// Yandex требует Api-Key или IAM token
+	req.Header.Set("Authorization", "Api-Key "+p.key)
+	req.Header.Set("Content-Type", "application/json")
 
-	pred.log.Debug("Calling cloud ai api", slog.String("url", pred.url))
-
-	resp, err := http.DefaultClient.Do(req)
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("AI API error: status %d", resp.StatusCode)
+	if resp.StatusCode != 200 {
+		return "", fmt.Errorf("cloud AI status: %d", resp.StatusCode)
 	}
 
-	return "Базовый текст бебе", nil
+	// Парсим сложный ответ Яндекса
+	var result struct {
+		Result struct {
+			Alternatives []struct {
+				Message struct {
+					Text string `json:"text"`
+				} `json:"message"`
+			} `json:"alternatives"`
+		} `json:"result"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", err
+	}
+
+	if len(result.Result.Alternatives) > 0 {
+		return result.Result.Alternatives[0].Message.Text, nil
+	}
+
+	return "", fmt.Errorf("empty response from cloud AI")
 }

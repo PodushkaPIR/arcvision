@@ -5,73 +5,71 @@ import (
 	"errors"
 	"fatearcan/internal/domain"
 	"fmt"
+	"math/rand/v2"
 	"os"
-	"slices"
 )
 
-
 type JSONStorage struct {
-	cards []domain.TarotCard
+	cards   []domain.TarotCard
 	spreads []domain.Spread
 }
 
+// NewStorage загружает данные при старте.
 func NewStorage(deckPath, spreadPath string) (*JSONStorage, error) {
-	var storage JSONStorage
+	s := &JSONStorage{} // Инициализируем указатель
 
-	if err := storage.loadCard(deckPath); err != nil {
-		return nil, fmt.Errorf("failed to load cards: %w", err)
+	if err := s.loadFromFile(deckPath, &s.cards); err != nil {
+		return nil, fmt.Errorf("loading deck: %w", err)
 	}
-	if err := storage.loadSpreads(spreadPath); err != nil {
-		return nil, fmt.Errorf("failed to load spreads: %w", err)
+	if err := s.loadFromFile(spreadPath, &s.spreads); err != nil {
+		return nil, fmt.Errorf("loading spreads: %w", err)
 	}
 
-	return &storage, nil
+	return s, nil
 }
 
-var (
-	ErrCardNotFound   = errors.New("card not found")
-	ErrSpreadNotFound = errors.New("spread not found")
-)
-
-func (storage *JSONStorage) loadCard(path string) error {
+// Generic метод для загрузки JSON
+func (s *JSONStorage) loadFromFile(path string, target any) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
-	return json.Unmarshal(data, &storage.spreads)
+	return json.Unmarshal(data, target)
 }
 
-func (storage *JSONStorage) loadSpreads(path string) error {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(data, &storage.spreads)
+// DataProvider - интерфейс для доступа к данным (Repository).
+type DataProvider interface {
+	GetSpread(id string) (domain.Spread, error)
+	GetAllSpreads() []domain.Spread
+	GetRandomCards(count int) ([]domain.TarotCard, error)
 }
 
-func (storage *JSONStorage) GetAllCards() []domain.TarotCard {
-	return slices.Clone(storage.cards)
+func (s *JSONStorage) GetAllSpreads() []domain.Spread {
+	return s.spreads
 }
 
-func (storage *JSONStorage) GetCardByID(id int) (*domain.TarotCard, error) {
-	for _, card := range storage.cards {
-		if card.ID == id {
-			return &card, nil
-		}
-	}
-	return nil, ErrCardNotFound
-}
-
-func (storage *JSONStorage) GetAllSpreads() []domain.Spread {
-	return slices.Clone(storage.spreads)
-}
-
-func (storage *JSONStorage) GetSpreadByID(id int) (*domain.Spread, error) {
-	for _, spread := range storage.spreads {
+func (s *JSONStorage) GetSpread(id string) (domain.Spread, error) {
+	for _, spread := range s.spreads {
 		if spread.ID == id {
-			return &spread, nil
+			return spread, nil
 		}
 	}
-	return nil, ErrSpreadNotFound
+	return domain.Spread{}, errors.New("spread not found")
 }
 
+func (s *JSONStorage) GetRandomCards(count int) ([]domain.TarotCard, error) {
+	if count > len(s.cards) {
+		return nil, errors.New("not enough cards in deck")
+	}
+
+	// Создаем копию слайса, чтобы не мешать порядок в оригинале
+	deckCopy := make([]domain.TarotCard, len(s.cards))
+	copy(deckCopy, s.cards)
+
+	// Перемешиваем (Go 1.22 style)
+	rand.Shuffle(len(deckCopy), func(i, j int) {
+		deckCopy[i], deckCopy[j] = deckCopy[j], deckCopy[i]
+	})
+
+	return deckCopy[:count], nil
+}
