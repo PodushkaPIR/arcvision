@@ -10,7 +10,7 @@ storage:
   spread_path: "./web/data/spreads.json"
 
 ai:
-  mode: "local"
+  mode: "cloud"
   
   # Локальный AI (Ollama)
   local:

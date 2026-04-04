@@ -24,11 +24,11 @@ func NewLocalPredictor(log *slog.Logger, url, model string) *LocalPredictor {
 	}
 }
 
-// Структура запроса для Ollama
 type ollamaRequest struct {
 	Model  string `json:"model"`
 	Prompt string `json:"prompt"`
 	Stream bool   `json:"stream"`
+	System string `json:"system"`
 }
 
 // Структура ответа от Ollama
@@ -42,6 +42,7 @@ func (p *LocalPredictor) Generate(ctx context.Context, prompt string) (string, e
 	payload := ollamaRequest{
 		Model:  p.model,
 		Prompt: prompt,
+		System: SystemPrompt,
 		Stream: false,
 	}
 

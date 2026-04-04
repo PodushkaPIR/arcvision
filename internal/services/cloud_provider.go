@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"time"
@@ -31,8 +32,9 @@ func (p *CloudPredictor) Generate(ctx context.Context, prompt string) (string, e
 
 	payload := map[string]any{
 		"model": p.model,
-		"messages": []map[string]string{
-			{"role": "user", "text": prompt},
+		"messages": []map[string]any{
+			{"role": "system", "content": SystemPrompt},
+			{"role": "user", "content": prompt},
 		},
 		"temperature": 0.7,
 		"max_tokens":  2000,
@@ -56,8 +58,13 @@ func (p *CloudPredictor) Generate(ctx context.Context, prompt string) (string, e
 	}
 	defer resp.Body.Close()
 
+	body, _ := io.ReadAll(resp.Body)
+
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("cloud AI status: %d", resp.StatusCode)
+		p.log.Error("OpenRouter API error",
+			slog.Int("status", resp.StatusCode),
+			slog.String("response", string(body)))
+		return "", fmt.Errorf("cloud AI status: %d, response: %s", resp.StatusCode, string(body))
 	}
 
 	var result struct {
@@ -68,7 +75,7 @@ func (p *CloudPredictor) Generate(ctx context.Context, prompt string) (string, e
 		} `json:"choices"`
 	}
 
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+	if err := json.Unmarshal(body, &result); err != nil {
 		return "", err
 	}
 
