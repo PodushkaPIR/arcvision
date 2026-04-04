@@ -1,15 +1,22 @@
-env: local
+env: "local"
 
 http_server:
-  address: ":8082"
-  timeout: 5s
+  address: "localhost:8082"
+  timeout: 10s
   idle_timeout: 60s
 
-ai:
-  provider: 
-  base_url:
-  model:
-
-deck:
+storage:
   deck_path: "./web/data/deck.json"
   spread_path: "./web/data/spreads.json"
+
+ai:
+  mode: "local"
+  
+  # Настройки для локального запуска (Ollama)
+  local:
+    url: "http://localhost:11434/api/generate"
+    model: "llama3" # Убедитесь, что модель скачана (ollama pull llama3)
+
+  cloud:
+    url: "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
+    model: "yandexgpt-lite"

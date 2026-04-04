@@ -10,10 +10,10 @@ import (
 )
 
 type Config struct {
-	Env        string `yaml:"env" env-default:"local"`
-	HttpServer        `yaml:"http_server"`
-	Storage           `yaml:"storage"`
-	AI                `yaml:"ai"`
+	Env        string     `yaml:"env" env-default:"local"`
+	HttpServer HttpServer `yaml:"http_server"`
+	Storage    Storage    `yaml:"storage"`
+	AI         AIConfig   `yaml:"ai"`
 }
 
 type HttpServer struct {
