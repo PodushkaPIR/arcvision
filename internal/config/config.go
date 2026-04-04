@@ -2,8 +2,8 @@ package config
 
 import (
 	"log"
-	"time"
 	"os"
+	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/joho/godotenv"
@@ -17,9 +17,9 @@ type Config struct {
 }
 
 type HttpServer struct {
-    Address 	 string        `yaml:"address" env-default:"localhost:8082"`
-    Timeout      time.Duration `yaml:"timeout" env-default:"5s"`
-    IdleTimeout  time.Duration `yaml:"iddle_timeout" env-default:"60s"`
+	Address     string        `yaml:"address" env-default:"localhost:8082"`
+	Timeout     time.Duration `yaml:"timeout" env-default:"5s"`
+	IdleTimeout time.Duration `yaml:"iddle_timeout" env-default:"60s"`
 }
 
 type Storage struct {
@@ -28,21 +28,18 @@ type Storage struct {
 }
 
 type AIConfig struct {
-	Mode     string `yaml:"mode" env:"AI_MODE" env-default:"local"`
+	Mode string `yaml:"mode" env:"AI_MODE" env-default:"local"`
 
 	Cloud struct {
-		URL      string `yaml:"url" env:"AI_CLOUD_URL"`
-		Key      string `env:"AI_CLOUD_KEY"`
-		FolderID string `env:"AI_CLOUD_FOLDER_ID"`
-		Model    string `yalm:"model" env-default:"yandexgpt-lite"`
+		URL   string `yaml:"url" env:"AI_CLOUD_URL"`
+		Key   string `env:"AI_CLOUD_KEY"`
+		Model string `yaml:"model" env-default:"qwen/qwen3.6-plus:free"`
 	} `yaml:"cloud"`
 
 	Local struct {
-		URL   string `yaml:"url" env:"AI_LOCAL_URL" env-default:"https://localhost:11434/api/generate`
+		URL   string `yaml:"url" env:"AI_LOCAL_URL" env-default:"http://localhost:11434/api/generate"`
 		Model string `yaml:"model" env-default:"llama3"`
-
 	} `yaml:"local"`
-
 }
 
 func MustLoad() *Config {

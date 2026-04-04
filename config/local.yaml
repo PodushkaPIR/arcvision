@@ -12,11 +12,12 @@ storage:
 ai:
   mode: "local"
   
-  # Настройки для локального запуска (Ollama)
+  # Локальный AI (Ollama)
   local:
     url: "http://localhost:11434/api/generate"
-    model: "llama3" # Убедитесь, что модель скачана (ollama pull llama3)
+    model: "llama3"
 
+  # Облачный AI (OpenRouter)
   cloud:
-    url: "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
-    model: "yandexgpt-lite"
+    url: "https://openrouter.ai/api/v1/chat/completions"
+    model: "qwen/qwen3.6-plus:free"

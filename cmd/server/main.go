@@ -45,10 +45,9 @@ func main() {
 			log,
 			cfg.AI.Cloud.URL,
 			cfg.AI.Cloud.Key,
-			cfg.AI.Cloud.FolderID,
 			cfg.AI.Cloud.Model,
 		)
-		log.Info("using CLOUD AI provider (Yandex)")
+		log.Info("using CLOUD AI provider (OpenRouter)")
 	case "local":
 		aiProvider = services.NewLocalPredictor(
 			log,
