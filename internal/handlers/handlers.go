@@ -96,7 +96,8 @@ func (h *TarotHandler) HandleChat(w http.ResponseWriter, r *http.Request) {
 	response, err := h.service.Chat(r.Context(), req.SystemPrompt, req.History, req.SpreadID, req.Question, req.Cards)
 	if err != nil {
 		h.log.Error("failed to process chat", slog.String("error", err.Error()))
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 

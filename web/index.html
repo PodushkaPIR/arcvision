@@ -215,6 +215,11 @@
                     })
                 });
                 const data = await res.json();
+                if (data.error) {
+                    document.querySelector('.loading').remove();
+                    addMessage('assistant', 'Ошибка: ' + data.error);
+                    return;
+                }
                 history.push({ role: 'assistant', content: data.message });
                 
                 document.querySelector('.loading').remove();
